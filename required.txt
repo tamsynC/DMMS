@@ -2,3 +2,5 @@ required.txt
 
 pyserial
 tkinter
+
+pip install PyQt5
