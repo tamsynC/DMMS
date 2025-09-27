@@ -12,10 +12,16 @@ string_f = "F0\n"
 string_rv= "R0\n"
 distance = 0
 
+BAUD = 9600
+PORT = "/dev/ttyACM0" #windows COM5 for T arduino uno
 
-BAUD = 9600 #MUST BE SAME AS THE ARDUINO
-PORT = "COM5" #WILL CHANGE BASED ON THE ARDUINO
-serial = serial.Serial(PORT, BAUD, timeout=1)
+try:
+    ser = serial.Serial(PORT, BAUD, timeout=1)
+    print(f"✅ Connected to {PORT}")
+except serial.SerialException as e:
+    ser = None
+    print(f"⚠️ Could not open serial port {PORT}: {e}")
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -29,6 +35,8 @@ class MainWindow(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.read_serial)
         self.timer.start(10)
+
+
 
     def initUI(self):
 
@@ -87,22 +95,22 @@ class MainWindow(QMainWindow):
 
     def forward_press(self):
         string_f = "F1\n"
-        serial.write(string_f.encode())
+        ser.write(string_f.encode())
         print("Sent: ", string_f.strip())
 
     def forward_release(self):
         string_f = "F0\n"
-        serial.write(string_f.encode())
+        ser.write(string_f.encode())
         print("Sent: ", string_f.strip())
 
     def backward_press(self):
         string_r = "R1\n"
-        serial.write(string_r.encode())
+        ser.write(string_r.encode())
         print("Sent: ", string_r.strip())
 
     def backward_release(self):
         string_r = "R0\n"
-        serial.write(string_r.encode())
+        ser.write(string_r.encode())
         print("Sent: ", string_r.strip())
 
     def record_position(self):
@@ -115,8 +123,8 @@ class MainWindow(QMainWindow):
             f.write(log_line)
         
     def read_serial(self):
-        if serial.in_waiting > 0:
-            line = serial.readline().decode("utf-8").strip()
+        if ser.in_waiting > 0:
+            line = ser.readline().decode("utf-8").strip()
             if line.startswith("COUNT:"):
                 self.distance = int(line.split(":")[1])
                 self.distance = self.distance // 10
