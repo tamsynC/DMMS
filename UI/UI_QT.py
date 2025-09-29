@@ -13,7 +13,8 @@ string_rv= "R0\n"
 distance = 0
 
 BAUD = 9600
-PORT = "/dev/ttyACM0" #windows COM5 for T arduino uno
+# PORT = "/dev/ttyACM0" #windows COM5 for T arduino uno
+PORT = "COM5"
 
 try:
     ser = serial.Serial(PORT, BAUD, timeout=1)
