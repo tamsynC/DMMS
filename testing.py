@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import *
-import sys
+import sys, os
 
 class MainWindow(QWidget):
 
@@ -13,6 +13,14 @@ class MainWindow(QWidget):
     def main_menu(self, text):
         layout = QVBoxLayout()
         lable = QLabel(f"Job Name: {text}")
+
+        try:
+            os.mkdir(text)
+            file_path = os.path.join(text, f"{text}.txt")
+            with open (file_path, "a") as f:
+                f.write(f"We made a text file called {text}\n")
+        except Exception as e:
+            print("Error: ", e)
 
         layout.addWidget(lable)
         self.setLayout(layout)
