@@ -122,7 +122,7 @@ class MainWindow(QMainWindow):
             self.file_path = os.path.join(project_name, f"{project_name}.txt")
             date = datetime.datetime.now().strftime("%d-%m-%Y")
             with open(self.file_path, "a") as f:
-                f.write(f"Project Name: {project_name}  Date: {date}\n")
+                f.write(f"Project Name: {project_name}  Date: {date}\n\n")
         except Exception as e:
             print("Error: ", e)
 
@@ -167,7 +167,7 @@ class MainWindow(QMainWindow):
                 self.distance_label.setText(f"Distance: {self.distance}")
 
     def open_files(self):
-        self.file_window = FileWindow(self.project_name)
+        self.file_window = FileWindow(base_path=".")
         self.file_window.show()
 
     def go_home(self):
@@ -198,7 +198,14 @@ class StartWindow(QWidget):
                             "font-size: 30px;")
         title.setAlignment(Qt.AlignCenter)
         title.setFixedHeight(60)
-        layout.addWidget(title, 0, 0, 1, 4)
+        layout.addWidget(title, 0, 0, 1, 3)
+
+        self.files = QPushButton()
+        self.files.setFixedHeight(title_row_height)
+        self.files.setIcon(QIcon("folder.png"))
+        self.files.setIconSize(QSize(120, 120))
+        self.files.clicked.connect(self.open_files)
+        layout.addWidget(self.files, 0, 3, 1, 1)
 
         image = QLabel()
         image_pixmap = QPixmap("Window_Icon.png")
@@ -250,14 +257,19 @@ class StartWindow(QWidget):
         self.main_menu.show()
         self.close()
 
+    def open_files(self):
+        self.file_window = FileWindow(base_path=".")
+        self.file_window.show()
+
 class FileWindow(QWidget):
-    def __init__(self, project_name):
+    def __init__(self, base_path="."):
         super().__init__()
         self.setWindowTitle(f"{string_window_title} Files")
-        self.setGeometry(300, 200, 600, 300)
+        self.setGeometry(200, 200, 800, 300)
         self.setWindowIcon(QIcon("Window_Icon.png"))
 
-        self.project_name = project_name
+        self.base_path = base_path
+        self.current_path = None
 
         self.file_menu()
 
@@ -265,35 +277,62 @@ class FileWindow(QWidget):
 
         layout = QGridLayout()
 
-        folder_lable = QLabel(f"Project: {self.project_name}")
+        folder_lable = QLabel(f"Projects List")
         folder_lable.setStyleSheet("font: 16px;"
-                                   "background-color: grey;")
+                                   "background-color: grey;"
+                                   "font-weight: bold;")
         folder_lable.setAlignment(Qt.AlignCenter)
-        folder_lable.setFixedHeight(30)
+        folder_lable.setFixedHeight(40)
         layout.addWidget(folder_lable, 0, 0, 1, 2)
+
+        self.folder_list = QListWidget()
+        if os.path.exists(self.base_path):
+            folders = [f for f in os.listdir(self.base_path) if os.path.isdir(os.path.join(self.base_path, f))]
+            for folder in folders:
+                self.folder_list.addItem(folder)
+        self.folder_list.setStyleSheet("""QListWidget{
+                                        font-size: 14px;}
+                                        """)
+        layout.addWidget(self.folder_list, 1, 0, 3, 1)
+        
         self.file_list = QListWidget()
-        if os.path.exists(self.project_name):
-            files = os.listdir(self.project_name)
-            for f in files:
-                self.file_list.addItem(f)
+        self.file_list.setStyleSheet("""QListWidget{
+                                        font-size: 14px;}
+                                        """)
+        layout.addWidget(self.file_list, 1, 1, 3, 1)
 
-        layout.addWidget(self.file_list, 1, 0, 3, 1)
-
-        self.preview_label = QLabel("Preview / Placeholder")
+        self.preview_label = QLabel("Open a file to view")
         self.preview_label.setAlignment(Qt.AlignCenter)
         self.preview_label.setStyleSheet("background-color: grey; color: black;")
         self.preview_label.setWordWrap(True)
-        layout.addWidget(self.preview_label, 1, 1, 3, 1)
+        layout.addWidget(self.preview_label, 0, 2, 4, 1)
 
         layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(1, 3)
+        layout.setColumnStretch(1, 1)
+        layout.setColumnStretch(2, 3)
+
+        self.folder_list.itemClicked.connect(self.load_files)
 
         self.file_list.itemDoubleClicked.connect(self.show_preview)
 
         self.setLayout(layout)
 
+    def load_files(self, item):
+        self.current_folder = os.path.join(self.base_path, item.text())
+        self.file_list.clear()
+        if os.path.exists(self.current_folder):
+            files = os.listdir(self.current_folder)
+            for f in files:
+                self.file_list.addItem(f)
+        self.preview_label.setText("Select a file to preview")
+        self.preview_label.setPixmap(QPixmap())
+
     def show_preview(self, item):
-        file_path = os.path.join(self.project_name, item.text())
+
+        if self.current_folder is None:
+            return
+
+        file_path = os.path.join(self.current_folder, item.text())
 
         if os.path.isfile(file_path):
             if item.text().lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif")):
@@ -304,6 +343,7 @@ class FileWindow(QWidget):
                     Qt.KeepAspectRatio, 
                     Qt.SmoothTransformation
                 ))
+                self.preview_label.setText("")
             # For text files
             elif item.text().lower().endswith(".txt"):
                 with open(file_path, "r") as f:
