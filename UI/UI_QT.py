@@ -37,7 +37,7 @@ class MainWindow(QMainWindow):
         self.project_name = project_name
 
         self.setWindowTitle(string_window_title)
-        self.setGeometry(100,100,1000,550) #x,y,width,height
+        self.setGeometry(0,0,800,480) #x,y,width,height
         self.setWindowIcon(QIcon("Window_Icon.png"))
         self.main_menu(project_name)
 
@@ -205,7 +205,7 @@ class StartWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(string_window_title)
-        self.setGeometry(100, 100, 1000, 500)
+        self.setGeometry(0,0,800,480) #x,y,width,height
         self.setWindowIcon(QIcon("Window_Icon.png"))
 
         self.start_menu()
@@ -290,7 +290,9 @@ class FileWindow(QWidget):
     def __init__(self, base_path="."):
         super().__init__()
         self.setWindowTitle(f"{string_window_title} Files")
-        self.setGeometry(200, 200, 800, 300)
+        # self.setGeometry(200, 200, 800, 300)
+        # self.setGeometry(0,0,800,480) #x,y,width,height
+        self.setGeometry(160, 96, 480, 228)
         self.setWindowIcon(QIcon("Window_Icon.png"))
 
         self.base_path = base_path
