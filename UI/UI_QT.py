@@ -1,7 +1,10 @@
-import sys, os
+import sys, os, re
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+from PyQt5.QtMultimedia import *
+from PyQt5.QtMultimediaWidgets import *
+
 
 import serial, serial.tools.list_ports
 
@@ -14,6 +17,7 @@ distance = 0
 string_window_title = "Small Conduit Inspector"
 title_row_height = 60
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BAUD = 9600
 PORT = "/dev/ttyACM0" #windows COM5 for T arduino uno
 # PORT = "COM5"
@@ -75,18 +79,31 @@ class MainWindow(QMainWindow):
         self.files.clicked.connect(self.open_files)
         grid.addWidget(self.files, 0, 3, 1, 1)
 
-        grid.setColumnStretch(0, 3)   # Title side
+        grid.setColumnStretch(0, 4)   # Title side
         grid.setColumnStretch(1, 3)
         grid.setColumnStretch(2, 2)   # Home
         grid.setColumnStretch(3, 2)   # Files
 
-        image = QLabel(self)
-        # image.setGeometry(0, 75, 750, 450) #use // for interger division
-        image_pixmap = QPixmap("Video_Feed.png")
-        image.setPixmap(image_pixmap)
-        image.setScaledContents(True)
-        image.setFixedSize(750, 450)
-        grid.addWidget(image, 1, 0, 4, 2)
+        # image = QLabel(self)
+        # # image.setGeometry(0, 75, 750, 450) #use // for interger division
+        # image_pixmap = QPixmap("Video_Feed.png")
+        # image.setPixmap(image_pixmap)
+        # image.setScaledContents(True)
+        # image.setFixedSize(750, 450)
+        # grid.addWidget(image, 1, 0, 4, 2)
+
+        self.video_feed = QCameraViewfinder()
+        self.video_feed.setFixedWidth(750)
+        grid.addWidget(self.video_feed, 1, 0, 4, 2)
+
+        avaliable_cameras = QCameraInfo.availableCameras()
+        if not avaliable_cameras:
+            raise RuntimeError("No cameras detected")
+        
+        self.camera = QCamera(avaliable_cameras[2]) #endoscope on T laptop
+        self.camera.setViewfinder(self.video_feed)
+        self.image_capture = QCameraImageCapture(self.camera)
+        self.camera.start()
 
         self.forward = QPushButton("Forward", self)
         self.forward.setFixedHeight(row_height)
@@ -118,7 +135,11 @@ class MainWindow(QMainWindow):
         grid.addWidget(self.distance_label, 4, 2, 1, 2)
 
         try:
-            os.mkdir(project_name)
+            # os.mkdir(project_name)
+
+            self.project_path = os.path.join(BASE_DIR, project_name)
+            os.makedirs(self.project_path, exist_ok=True)
+
             self.file_path = os.path.join(project_name, f"{project_name}.txt")
             date = datetime.datetime.now().strftime("%d-%m-%Y")
             with open(self.file_path, "a") as f:
@@ -157,6 +178,10 @@ class MainWindow(QMainWindow):
 
         with open(self.file_path, "a") as f:
             f.write(log_line)
+
+        image_name = os.path.join(self.project_path, f"Time:{time}_Distance:{self.distance}.jpg")
+        self.image_capture.capture(image_name)
+        print(f"Saved Image to {image_name}")
         
     def read_serial(self):
         if ser.in_waiting > 0:
