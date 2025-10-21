@@ -1,4 +1,4 @@
-import sys, os, re
+import sys, os, re, cv2
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -22,6 +22,8 @@ BAUD = 9600
 PORT = "/dev/ttyACM0" #windows COM5 for T arduino uno
 # PORT = "COM5"
 
+DEVICE = "/dev/video4"
+
 try:
     ser = serial.Serial(PORT, BAUD, timeout=1)
     print(f"Connected to {PORT}")
@@ -35,12 +37,30 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.project_name = project_name
+        self.distance = 0
+        self.last_frame_bgr = None
 
         self.setWindowTitle(string_window_title)
         self.setGeometry(0,0,800,480) #x,y,width,height
         self.setWindowIcon(QIcon("Window_Icon.png"))
         self.main_menu(project_name)
 
+         # --- OpenCV camera setup (V4L2) ---
+        self.cap = cv2.VideoCapture(DEVICE, cv2.CAP_V4L2)
+        if not self.cap.isOpened():
+            raise RuntimeError(f"Could not open {DEVICE}")
+
+        # Try to negotiate a sane mode (V4L2 will pick nearest valid)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cap.set(cv2.CAP_PROP_FPS, 30)
+
+        # Timer for camera frames (~30 fps)
+        self.cam_timer = QTimer(self)
+        self.cam_timer.timeout.connect(self.update_frame)
+        self.cam_timer.start(30)
+
+        # Existing serial read timer
         self.timer = QTimer()
         self.timer.timeout.connect(self.read_serial)
         self.timer.start(10)
@@ -84,26 +104,12 @@ class MainWindow(QMainWindow):
         grid.setColumnStretch(2, 2)   # Home
         grid.setColumnStretch(3, 2)   # Files
 
-        # image = QLabel(self)
-        # # image.setGeometry(0, 75, 750, 450) #use // for interger division
-        # image_pixmap = QPixmap("Video_Feed.png")
-        # image.setPixmap(image_pixmap)
-        # image.setScaledContents(True)
-        # image.setFixedSize(750, 450)
-        # grid.addWidget(image, 1, 0, 4, 2)
-
-        self.video_feed = QCameraViewfinder()
+        self.video_feed = QLabel("Starting camera…", self)
+        self.video_feed.setAlignment(Qt.AlignCenter)
         self.video_feed.setFixedWidth(750)
+        self.video_feed.setMinimumHeight(300)
+        self.video_feed.setStyleSheet("background:#111; color:#bbb;")
         grid.addWidget(self.video_feed, 1, 0, 4, 2)
-
-        avaliable_cameras = QCameraInfo.availableCameras()
-        if not avaliable_cameras:
-            raise RuntimeError("No cameras detected")
-        
-        self.camera = QCamera(avaliable_cameras[2]) #endoscope on T laptop
-        self.camera.setViewfinder(self.video_feed)
-        self.image_capture = QCameraImageCapture(self.camera)
-        self.camera.start()
 
         self.forward = QPushButton("Forward", self)
         self.forward.setFixedHeight(row_height)
@@ -170,18 +176,40 @@ class MainWindow(QMainWindow):
         ser.write(string_r.encode())
         print("Sent: ", string_r.strip())
 
+    # def record_position(self):
+    #     print(f"Photo Taken, Position Recorded {self.distance}")
+    #     time = datetime.datetime.now().strftime("%H-%M-%S")
+
+    #     log_line = f"Time: {time}   Distance: {self.distance}\n"
+
+    #     with open(self.file_path, "a") as f:
+    #         f.write(log_line)
+
+    #     image_name = os.path.join(self.project_path, f"Time:{time}_Distance:{self.distance}.jpg")
+    #     self.image_capture.capture(image_name)
+    #     print(f"Saved Image to {image_name}")
+
     def record_position(self):
         print(f"Photo Taken, Position Recorded {self.distance}")
-        time = datetime.datetime.now().strftime("%H-%M-%S")
+        tstamp = datetime.datetime.now().strftime("%H-%M-%S")
+        log_line = f"Time: {tstamp}   Distance: {self.distance}\n"
+        try:
+            with open(self.file_path, "a") as f:
+                f.write(log_line)
+        except Exception as e:
+            print("Log write error:", e)
 
-        log_line = f"Time: {time}   Distance: {self.distance}\n"
-
-        with open(self.file_path, "a") as f:
-            f.write(log_line)
-
-        image_name = os.path.join(self.project_path, f"Time:{time}_Distance:{self.distance}.jpg")
-        self.image_capture.capture(image_name)
-        print(f"Saved Image to {image_name}")
+        if self.last_frame_bgr is not None:
+            image_name = os.path.join(
+                self.project_path, f"Time-{tstamp}_Distance-{self.distance}.jpg"
+            )
+            try:
+                cv2.imwrite(image_name, self.last_frame_bgr)
+                print(f"Saved Image to {image_name}")
+            except Exception as e:
+                print("Image save error:", e)
+        else:
+            print("No frame available to save.")
         
     def read_serial(self):
         if ser.in_waiting > 0:
@@ -197,8 +225,41 @@ class MainWindow(QMainWindow):
 
     def go_home(self):
         self.start_window = StartWindow()
-        self.start_window.show()
+        self.start_window.showFullScreen()
         self.close()
+
+    def update_frame(self):
+        if not self.cap or not self.cap.isOpened():
+            self.video_feed.setText("Camera not open")
+            return
+        ok, frame = self.cap.read()
+        if not ok or frame is None:
+            self.video_feed.setText("No frame")
+            return
+
+        # Keep last frame for saving on capture
+        self.last_frame_bgr = frame
+
+        # Convert BGR -> RGB and show
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb.shape
+        qimg = QImage(rgb.data, w, h, ch * w, QImage.Format_RGB888)
+        pix = QPixmap.fromImage(qimg).scaled(
+            self.video_feed.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+        self.video_feed.setPixmap(pix)
+
+    def closeEvent(self, e):
+        try:
+            if hasattr(self, "cam_timer") and self.cam_timer.isActive():
+                self.cam_timer.stop()
+            if hasattr(self, "timer") and self.timer.isActive():
+                self.timer.stop()
+            if hasattr(self, "cap") and self.cap and self.cap.isOpened():
+                self.cap.release()
+        except Exception:
+            pass
+        super().closeEvent(e)
 
 class StartWindow(QWidget):
 
@@ -279,7 +340,7 @@ class StartWindow(QWidget):
             counter += 1
 
         self.main_menu = MainWindow(project_name)
-        self.main_menu.show()
+        self.main_menu.showFullScreen()
         self.close()
 
     def open_files(self):
@@ -386,7 +447,7 @@ def main():
     app = QApplication(sys.argv)
     window = StartWindow()
 
-    window.show()
+    window.showFullScreen()
     sys.exit(app.exec_()) #exec_ is to execute
 
 
