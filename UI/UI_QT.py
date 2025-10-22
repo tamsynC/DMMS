@@ -106,8 +106,6 @@ class MainWindow(QMainWindow):
 
         self.video_feed = QLabel("Starting camera…", self)
         self.video_feed.setAlignment(Qt.AlignCenter)
-        self.video_feed.setFixedWidth(750)
-        self.video_feed.setMinimumHeight(300)
         self.video_feed.setStyleSheet("background:#111; color:#bbb;")
         grid.addWidget(self.video_feed, 1, 0, 4, 2)
 
@@ -225,7 +223,7 @@ class MainWindow(QMainWindow):
 
     def go_home(self):
         self.start_window = StartWindow()
-        self.start_window.showFullScreen()
+        self.start_window.show()
         self.close()
 
     def update_frame(self):
@@ -293,6 +291,9 @@ class StartWindow(QWidget):
         self.files.clicked.connect(self.open_files)
         layout.addWidget(self.files, 0, 3, 1, 1)
 
+        self.close = QPushButton()
+
+
         image = QLabel()
         image_pixmap = QPixmap("Window_Icon.png")
         image.setPixmap(image_pixmap)
@@ -340,7 +341,7 @@ class StartWindow(QWidget):
             counter += 1
 
         self.main_menu = MainWindow(project_name)
-        self.main_menu.showFullScreen()
+        self.main_menu.show()
         self.close()
 
     def open_files(self):
@@ -447,7 +448,7 @@ def main():
     app = QApplication(sys.argv)
     window = StartWindow()
 
-    window.showFullScreen()
+    window.show()
     sys.exit(app.exec_()) #exec_ is to execute
 
 
