@@ -17,7 +17,7 @@ title_row_height = 60
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BAUD = 9600
 PORT = "/dev/ttyACM0"   # On Windows e.g. "COM5"
-DEVICE = "/dev/video4"   # V4L2 device
+DEVICE = "/dev/video0"   # V4L2 device
 
 # ============================
 # Camera worker (runs in its own thread)
