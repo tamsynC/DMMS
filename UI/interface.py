@@ -17,7 +17,7 @@ title_row_height = 60
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BAUD = 9600
 PORT = "/dev/ttyACM0"   # On Windows e.g. "COM5"
-DEVICE = "/dev/video4"   # V4L2 device
+DEVICE = "/dev/video0"   # V4L2 device
 
 # ============================
 # Camera worker (runs in its own thread)
@@ -41,7 +41,7 @@ class CameraWorker(QObject):
                 return
             # Try a reasonable mode
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 450)
             self.cap.set(cv2.CAP_PROP_FPS, 30)
         except Exception as e:
             self.error.emit(str(e))
@@ -131,98 +131,6 @@ class StartPage(QWidget):
             counter += 1
         self.appwin.start_project(project_name)
 
-# ============================
-# Files Page (stack page)
-# ============================
-# class FilesPage(QWidget):
-#     def __init__(self, appwin, base_path="."):
-#         super().__init__()
-#         self.appwin = appwin
-#         self.base_path = base_path
-#         self.current_folder = None
-#         self._build()
-
-#     def _build(self):
-#         layout = QGridLayout()
-
-#         header = QLabel("Projects List")
-#         header.setStyleSheet("font: 16px; background-color: grey; font-weight: bold;")
-#         header.setAlignment(Qt.AlignCenter)
-#         header.setFixedHeight(40)
-#         layout.addWidget(header, 0, 0, 1, 3)
-
-#         self.back_btn = QPushButton("← Back")
-#         self.back_btn.clicked.connect(self._go_back)
-#         layout.addWidget(self.back_btn, 0, 3, 1, 1)
-
-#         self.folder_list = QListWidget()
-#         self.folder_list.setStyleSheet("QListWidget{font-size: 14px;}")
-#         layout.addWidget(self.folder_list, 1, 0, 3, 1)
-
-#         self.file_list = QListWidget()
-#         self.file_list.setStyleSheet("QListWidget{font-size: 14px;}")
-#         layout.addWidget(self.file_list, 1, 1, 3, 1)
-
-#         self.preview_label = QLabel("Open a file to view")
-#         self.preview_label.setAlignment(Qt.AlignCenter)
-#         self.preview_label.setStyleSheet("background-color: lightgray; color: black;")
-#         self.preview_label.setWordWrap(True)
-#         layout.addWidget(self.preview_label, 1, 2, 3, 2)
-
-#         layout.setColumnStretch(0, 1)
-#         layout.setColumnStretch(1, 1)
-#         layout.setColumnStretch(2, 2)
-#         layout.setColumnStretch(3, 0)
-#         self.setLayout(layout)
-
-#         self._refresh_folders()
-#         self.folder_list.itemClicked.connect(self._load_files)
-#         self.file_list.itemDoubleClicked.connect(self._show_preview)
-
-#     def _refresh_folders(self):
-#         self.folder_list.clear()
-#         if os.path.exists(self.base_path):
-#             for f in sorted(os.listdir(self.base_path)):
-#                 p = os.path.join(self.base_path, f)
-#                 if os.path.isdir(p):
-#                     self.folder_list.addItem(f)
-
-#     def _load_files(self, item):
-#         self.current_folder = os.path.join(self.base_path, item.text())
-#         self.file_list.clear()
-#         self.preview_label.setText("Select a file to preview")
-#         self.preview_label.setPixmap(QPixmap())
-#         if os.path.exists(self.current_folder):
-#             for f in sorted(os.listdir(self.current_folder)):
-#                 self.file_list.addItem(f)
-
-#     def _show_preview(self, item):
-#         if not self.current_folder:
-#             return
-#         file_path = os.path.join(self.current_folder, item.text())
-#         if not os.path.isfile(file_path):
-#             return
-#         name = item.text().lower()
-#         if name.endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif")):
-#             pixmap = QPixmap(file_path)
-#             self.preview_label.setPixmap(pixmap.scaled(
-#                 self.preview_label.width(),
-#                 self.preview_label.height(),
-#                 Qt.KeepAspectRatio,
-#                 Qt.SmoothTransformation,
-#             ))
-#             self.preview_label.setText("")
-#         elif name.endswith(".txt"):
-#             with open(file_path, "r") as f:
-#                 text = f.read()
-#             self.preview_label.setPixmap(QPixmap())
-#             self.preview_label.setText(text)
-#         else:
-#             self.preview_label.setText(f"Cannot preview {item.text()}")
-#             self.preview_label.setPixmap(QPixmap())
-
-#     def _go_back(self):
-#         self.appwin.pop_to_previous()
 
 class FilesPage(QWidget):
     def __init__(self, appwin, base_path="."):
@@ -684,7 +592,7 @@ class AppWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(string_window_title)
         self.setWindowIcon(QIcon("Window_Icon.png"))
-        self.setGeometry(0, 0, 800, 480)
+        self.setGeometry(0, 0, 800, 400)
 
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
@@ -752,7 +660,7 @@ class AppWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(string_window_title)
         self.setWindowIcon(QIcon("Window_Icon.png"))
-        self.setGeometry(0, 0, 800, 480)
+        self.setGeometry(0, 0, 800, 400)
 
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
