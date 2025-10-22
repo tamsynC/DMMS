@@ -1,7 +1,7 @@
-import sys, os, cv2, datetime
+import sys, os, cv2, datetime, re
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton, QLineEdit,
-    QGridLayout, QListWidget, QMessageBox, QStackedWidget
+    QGridLayout, QListWidget, QMessageBox, QStackedWidget, QVBoxLayout
 )
 from PyQt5.QtGui import QIcon, QPixmap, QImage, QFont
 from PyQt5.QtCore import Qt, QTimer, QSize, pyqtSignal, QObject, QThread, pyqtSlot
@@ -134,6 +134,96 @@ class StartPage(QWidget):
 # ============================
 # Files Page (stack page)
 # ============================
+# class FilesPage(QWidget):
+#     def __init__(self, appwin, base_path="."):
+#         super().__init__()
+#         self.appwin = appwin
+#         self.base_path = base_path
+#         self.current_folder = None
+#         self._build()
+
+#     def _build(self):
+#         layout = QGridLayout()
+
+#         header = QLabel("Projects List")
+#         header.setStyleSheet("font: 16px; background-color: grey; font-weight: bold;")
+#         header.setAlignment(Qt.AlignCenter)
+#         header.setFixedHeight(40)
+#         layout.addWidget(header, 0, 0, 1, 3)
+
+#         self.back_btn = QPushButton("← Back")
+#         self.back_btn.clicked.connect(self._go_back)
+#         layout.addWidget(self.back_btn, 0, 3, 1, 1)
+
+#         self.folder_list = QListWidget()
+#         self.folder_list.setStyleSheet("QListWidget{font-size: 14px;}")
+#         layout.addWidget(self.folder_list, 1, 0, 3, 1)
+
+#         self.file_list = QListWidget()
+#         self.file_list.setStyleSheet("QListWidget{font-size: 14px;}")
+#         layout.addWidget(self.file_list, 1, 1, 3, 1)
+
+#         self.preview_label = QLabel("Open a file to view")
+#         self.preview_label.setAlignment(Qt.AlignCenter)
+#         self.preview_label.setStyleSheet("background-color: lightgray; color: black;")
+#         self.preview_label.setWordWrap(True)
+#         layout.addWidget(self.preview_label, 1, 2, 3, 2)
+
+#         layout.setColumnStretch(0, 1)
+#         layout.setColumnStretch(1, 1)
+#         layout.setColumnStretch(2, 2)
+#         layout.setColumnStretch(3, 0)
+#         self.setLayout(layout)
+
+#         self._refresh_folders()
+#         self.folder_list.itemClicked.connect(self._load_files)
+#         self.file_list.itemDoubleClicked.connect(self._show_preview)
+
+#     def _refresh_folders(self):
+#         self.folder_list.clear()
+#         if os.path.exists(self.base_path):
+#             for f in sorted(os.listdir(self.base_path)):
+#                 p = os.path.join(self.base_path, f)
+#                 if os.path.isdir(p):
+#                     self.folder_list.addItem(f)
+
+#     def _load_files(self, item):
+#         self.current_folder = os.path.join(self.base_path, item.text())
+#         self.file_list.clear()
+#         self.preview_label.setText("Select a file to preview")
+#         self.preview_label.setPixmap(QPixmap())
+#         if os.path.exists(self.current_folder):
+#             for f in sorted(os.listdir(self.current_folder)):
+#                 self.file_list.addItem(f)
+
+#     def _show_preview(self, item):
+#         if not self.current_folder:
+#             return
+#         file_path = os.path.join(self.current_folder, item.text())
+#         if not os.path.isfile(file_path):
+#             return
+#         name = item.text().lower()
+#         if name.endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif")):
+#             pixmap = QPixmap(file_path)
+#             self.preview_label.setPixmap(pixmap.scaled(
+#                 self.preview_label.width(),
+#                 self.preview_label.height(),
+#                 Qt.KeepAspectRatio,
+#                 Qt.SmoothTransformation,
+#             ))
+#             self.preview_label.setText("")
+#         elif name.endswith(".txt"):
+#             with open(file_path, "r") as f:
+#                 text = f.read()
+#             self.preview_label.setPixmap(QPixmap())
+#             self.preview_label.setText(text)
+#         else:
+#             self.preview_label.setText(f"Cannot preview {item.text()}")
+#             self.preview_label.setPixmap(QPixmap())
+
+#     def _go_back(self):
+#         self.appwin.pop_to_previous()
+
 class FilesPage(QWidget):
     def __init__(self, appwin, base_path="."):
         super().__init__()
@@ -163,11 +253,23 @@ class FilesPage(QWidget):
         self.file_list.setStyleSheet("QListWidget{font-size: 14px;}")
         layout.addWidget(self.file_list, 1, 1, 3, 1)
 
+        # --- Preview section ---
+        preview_layout = QVBoxLayout()
+
         self.preview_label = QLabel("Open a file to view")
         self.preview_label.setAlignment(Qt.AlignCenter)
         self.preview_label.setStyleSheet("background-color: lightgray; color: black;")
         self.preview_label.setWordWrap(True)
-        layout.addWidget(self.preview_label, 1, 2, 3, 2)
+        preview_layout.addWidget(self.preview_label, stretch=5)
+
+        # NEW: filename label below image/text
+        self.filename_label = QLabel("")
+        self.filename_label.setAlignment(Qt.AlignCenter)
+        self.filename_label.setStyleSheet("font: 14px; color: gray; padding: 4px;")
+        preview_layout.addWidget(self.filename_label, stretch=1)
+
+        layout.addLayout(preview_layout, 1, 2, 3, 2)
+        # --- End preview section ---
 
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(1, 1)
@@ -192,9 +294,39 @@ class FilesPage(QWidget):
         self.file_list.clear()
         self.preview_label.setText("Select a file to preview")
         self.preview_label.setPixmap(QPixmap())
+        self.filename_label.setText("")  # Clear file name
         if os.path.exists(self.current_folder):
             for f in sorted(os.listdir(self.current_folder)):
                 self.file_list.addItem(f)
+
+    # def _show_preview(self, item):
+    #     if not self.current_folder:
+    #         return
+    #     file_path = os.path.join(self.current_folder, item.text())
+    #     if not os.path.isfile(file_path):
+    #         return
+
+    #     name = item.text()
+    #     lower = name.lower()
+    #     self.filename_label.setText(name)  # ✅ Update filename label
+
+    #     if lower.endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif")):
+    #         pixmap = QPixmap(file_path)
+    #         self.preview_label.setPixmap(pixmap.scaled(
+    #             self.preview_label.width(),
+    #             self.preview_label.height(),
+    #             Qt.KeepAspectRatio,
+    #             Qt.SmoothTransformation,
+    #         ))
+    #         self.preview_label.setText("")
+    #     elif lower.endswith(".txt"):
+    #         with open(file_path, "r") as f:
+    #             text = f.read()
+    #         self.preview_label.setPixmap(QPixmap())
+    #         self.preview_label.setText(text)
+    #     else:
+    #         self.preview_label.setText(f"Cannot preview {item.text()}")
+    #         self.preview_label.setPixmap(QPixmap())
 
     def _show_preview(self, item):
         if not self.current_folder:
@@ -202,8 +334,16 @@ class FilesPage(QWidget):
         file_path = os.path.join(self.current_folder, item.text())
         if not os.path.isfile(file_path):
             return
-        name = item.text().lower()
-        if name.endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif")):
+
+        filename = item.text()
+        lower = filename.lower()
+
+        # Show filename (title line)
+        name_no_ext = os.path.splitext(filename)[0]
+        self.filename_label.setText(name_no_ext)
+
+        # Preview content
+        if lower.endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif")):
             pixmap = QPixmap(file_path)
             self.preview_label.setPixmap(pixmap.scaled(
                 self.preview_label.width(),
@@ -212,17 +352,35 @@ class FilesPage(QWidget):
                 Qt.SmoothTransformation,
             ))
             self.preview_label.setText("")
-        elif name.endswith(".txt"):
+        elif lower.endswith(".txt"):
             with open(file_path, "r") as f:
                 text = f.read()
             self.preview_label.setPixmap(QPixmap())
             self.preview_label.setText(text)
         else:
-            self.preview_label.setText(f"Cannot preview {item.text()}")
+            self.preview_label.setText(f"Cannot preview {filename}")
             self.preview_label.setPixmap(QPixmap())
+
+        # --- Only Distance & GPS ---
+        self.filename_label.setText(self._format_distance_gps(filename))
+
+    # NEW: helper to parse your filename pattern and format just Distance & GPS
+    def _format_distance_gps(self, filename: str) -> str:
+        """
+        Supports names like:
+        Time-00-17-55_Distance-10_GPS--33.743137,150.995651.jpg
+        """
+        # allow integer or decimal distance; robust negative GPS with a literal '-' after 'GPS-'
+        m = re.search(r"_Distance-(\d+(?:\.\d+)?)_GPS-(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)",filename)
+        if not m:
+            return ""  # no metadata found; show nothing
+        dist, lat, lon = m.groups()
+        return f"Distance: {dist} m    GPS: {lat}, {lon}"
 
     def _go_back(self):
         self.appwin.pop_to_previous()
+
+
 
 # ============================
 # Serial worker (pyserial in its own thread)
@@ -295,6 +453,9 @@ class MainPage(QWidget):
         self.project_name = project_name
         self.distance = 0
         self.last_frame_bgr = None
+
+        self.gps_lat = 0
+        self.gps_long = 0
 
         # paths
         self.project_path = os.path.join(BASE_DIR, self.project_name)
@@ -380,9 +541,13 @@ class MainPage(QWidget):
         record.clicked.connect(self._record_position)
         grid.addWidget(record, 3, 2, 1, 2)
 
-        self.distance_label = QLabel("Distance: 0", self)
+        self.distance_label = QLabel(f"Distance: {self.distance}", self)
         self.distance_label.setStyleSheet("font-size:20px; background-color: lightgrey; padding:10px;")
-        grid.addWidget(self.distance_label, 4, 2, 1, 2)
+        grid.addWidget(self.distance_label, 4, 2, 1, 1)
+
+        self.gps_label = QLabel(f"GPS\n Lat: {self.gps_lat}\n Long:{self.gps_long}", self)
+        self.gps_label.setStyleSheet("font-size:20px; background-color: lightgrey; padding:10px;")
+        grid.addWidget(self.gps_label, 4, 3, 1, 1)
 
         grid.setRowMinimumHeight(1, 100)
         self.setLayout(grid)
@@ -407,15 +572,43 @@ class MainPage(QWidget):
         if self.video_feed.text() in ("", "Starting camera…"):
             self.video_feed.setText(msg)
 
-    # ---------- Serial slots ----------
+    # # ---------- Serial slots ----------
+    # def _on_serial_line(self, s: str):
+    #     if s.startswith("COUNT:"):
+    #         try:
+    #             val = int(s.split(":", 1)[1])
+    #             self.distance = val // 10
+    #             self.distance_label.setText(f"Distance: {self.distance}")
+    #         except Exception:
+    #             pass
+
     def _on_serial_line(self, s: str):
+        s = s.strip()
         if s.startswith("COUNT:"):
             try:
                 val = int(s.split(":", 1)[1])
-                self.distance = val // 10
+                self.distance = val // 10  # your existing scaling
                 self.distance_label.setText(f"Distance: {self.distance}")
             except Exception:
                 pass
+
+        elif s.startswith("GPS:"):
+            payload = s.split(":", 1)[1]
+            if payload == "INVALID":
+                # Optional: show a hint in the UI
+                self.gps_label.setText("GPS\n Lat: --\n Long: --")
+            else:
+                try:
+                    lat_str, lon_str = payload.split(",", 1)
+                    self.gps_lat = float(lat_str)
+                    self.gps_long = float(lon_str)
+                    self.gps_label.setText(
+                        f"GPS\n Lat: {self.gps_lat:.6f}\n Long:{self.gps_long:.6f}"
+                    )
+                except Exception:
+                    # Bad parse, ignore
+                    pass
+
 
     def _on_serial_error(self, msg: str):
         # Optional: show once or log
@@ -426,19 +619,29 @@ class MainPage(QWidget):
         if hasattr(self, 'ser_worker'):
             self.ser_worker.write_text(text)
 
-    # ---------- Actions ----------
     def _record_position(self):
         print(f"Photo Taken, Position Recorded {self.distance}")
         tstamp = datetime.datetime.now().strftime("%H-%M-%S")
-        log_line = f"Time: {tstamp}   Distance: {self.distance}\n"
+        # Log GPS if we have it; otherwise write placeholders
+        if isinstance(self.gps_lat, (int, float)) and isinstance(self.gps_long, (int, float)) \
+           and self.gps_lat != 0 and self.gps_long != 0:
+            gps_part = f"   GPS: {self.gps_lat:.6f},{self.gps_long:.6f}"
+        else:
+            gps_part = "   GPS: --,--"
+    
+        log_line = f"Time: {tstamp}   Distance: {self.distance}{gps_part}\n"
         try:
             with open(self.file_path, "a") as f:
                 f.write(log_line)
         except Exception as e:
             print("Log write error:", e)
-
+    
         if self.last_frame_bgr is not None:
-            image_name = os.path.join(self.project_path, f"Time-{tstamp}_Distance-{self.distance}.jpg")
+            # Optional: keep filename simple; GPS stays in the log
+            image_name = os.path.join(
+                self.project_path,
+                f"Time-{tstamp}_Distance-{self.distance}_GPS-{self.gps_lat},{self.gps_long}.jpg"
+            )
             try:
                 cv2.imwrite(image_name, self.last_frame_bgr)
                 print(f"Saved Image to {image_name}")
@@ -446,6 +649,7 @@ class MainPage(QWidget):
                 print("Image save error:", e)
         else:
             print("No frame available to save.")
+
 
     # ---------- Navigation & cleanup ----------
     def _go_home(self):
