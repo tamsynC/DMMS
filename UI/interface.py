@@ -429,14 +429,14 @@ class MainPage(QWidget):
 
         forward = QPushButton("Forward", self)
         forward.setFixedHeight(row_height)
-        forward.setStyleSheet("font-size:30px;")
+        forward.setStyleSheet("font-size:16px;")
         forward.pressed.connect(lambda: self._serial_write("F1\n"))
         forward.released.connect(lambda: self._serial_write("F0\n"))
         grid.addWidget(forward, 1, 2, 1, 2)
 
         backward = QPushButton("Backward", self)
         backward.setFixedHeight(row_height)
-        backward.setStyleSheet("font-size:30px;")
+        backward.setStyleSheet("font-size:16px;")
         backward.pressed.connect(lambda: self._serial_write("R1\n"))
         backward.released.connect(lambda: self._serial_write("R0\n"))
         grid.addWidget(backward, 2, 2, 1, 2)
