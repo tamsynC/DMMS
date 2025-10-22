@@ -1,48 +1,42 @@
 // #include <TinyGPSPlus.h>
 // #include <SoftwareSerial.h>
-
+//
 // // GPS module connections to Arduino Nano
 // // Connect GPS TX → Arduino pin 3 (RX)
 // // Connect GPS RX → Arduino pin 2 (TX)
 // static const int RXPin = 3, TXPin = 2;
 // static const uint32_t GPSBaud = 9600;
-
+//
 // // Create GPS and serial objects
 // TinyGPSPlus gps;
 // SoftwareSerial ss(RXPin, TXPin);
-
-// void setup() {
+//void setup() {
 //   // Begin serial communication for the monitor
 //   Serial.begin(9600);
 //   while (!Serial); // Wait for Serial to open on Nano (especially if using native USB versions)
-
+//
 //   // Begin serial communication with the GPS module
 //   ss.begin(GPSBaud);
-
-//   // Serial.println(F("TinyGPS++ Example for Arduino Nano"));
+//  // Serial.println(F("TinyGPS++ Example for Arduino Nano"));
 //   // Serial.println(F("Ensure GPS TX → D3 and GPS RX → D2"));
 //   // Serial.println(F("Waiting for GPS data...\n"));
 // }
-
-// void loop() {
+//void loop() {
 //   // Continuously read data from GPS
 //   while (ss.available() > 0) {
 //     if (gps.encode(ss.read())) {
 //       displayInfo();
 //     }
 //   }
-
 //   // If after 5 seconds no GPS data has been processed, alert the user
 //   if (millis() > 5000 && gps.charsProcessed() < 10) {
 //     Serial.println(F("No GPS detected: check wiring and baud rate."));
 //     while (true);
 //   }
 // }
-
 // void displayInfo() {
 //   Serial.println(F("------ GPS Data ------"));
-
-//   // Location data
+//  // Location data
 //   if (gps.location.isValid()) {
 //     Serial.print(F("Latitude: "));
 //     Serial.println(gps.location.lat(), 6);
@@ -53,9 +47,9 @@
 //     Serial.print(F(","));
 //     Serial.println(gps.location.lng(), 6);
 //   } else {
-//     Serial.println(F("Location: INVALID"));
+//    Serial.println(F("Location: INVALID"));
 //   }
-
+//
 //   // Date
 //   if (gps.date.isValid()) {
 //     Serial.print(F("Date: "));
@@ -67,7 +61,6 @@
 //   } else {
 //     Serial.println(F("Date: INVALID"));
 //   }
-
 //   // Time
 //   if (gps.time.isValid()) {
 //     Serial.print(F("Time (UTC): "));
@@ -82,9 +75,11 @@
 //   } else {
 //     Serial.println(F("Time: INVALID"));
 //   }
-
+//
 //   Serial.println();
-// }
+//}
+
+
 
 #include <TinyGPSPlus.h>
 #include <SoftwareSerial.h>
@@ -123,7 +118,7 @@ void setup() {
   digitalWrite(LED_A, LOW);
   digitalWrite(LED_B, LOW);
 
-  Serial.begin(9600);
+ Serial.begin(9600);
   ss.begin(GPSBaud);
 
   inputString.reserve(200);
@@ -148,11 +143,11 @@ void loop() {
   if (!warnedNoGPS && (millis() - startMillis > 5000) && gps.charsProcessed() < 10) {
     Serial.println(F("GPS:INVALID"));
     warnedNoGPS = true;
-  }
+ }
 
   // --- 100 ms ticker: update distance and publish COUNT ---
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval) {
+unsigned long currentMillis = millis();
+if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
 
     if (ledAState) millisCount += interval;          // forward adds distance
@@ -160,7 +155,7 @@ void loop() {
 
     Serial.print(F("COUNT:"));
     Serial.println(millisCount);
-  }
+ }
 
   // --- Process serial commands from Python (F0/F1/R0/R1) ---
   serialCommandReader();
@@ -178,10 +173,9 @@ void loop() {
 void serialCommandReader() {
   while (Serial.available()) {
     char inChar = (char)Serial.read();
-    inputString += inChar;
+   inputString += inChar;
     if (inChar == '\n') {
       stringComplete = true;
     }
   }
 }
-
