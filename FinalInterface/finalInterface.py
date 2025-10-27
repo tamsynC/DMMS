@@ -16,16 +16,35 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(string_main_title)
         self.setWindowIcon(QIcon("Window_Icon.png"))
 
-        # --- Create toolbar ---
+        self.main_menu()
+
+
+
+    def main_menu(self):
+
+        # Create Toolbar
         toolbar = QToolBar("Main Toolbar")
-        toolbar.setIconSize(QSize(24, 24))
+        toolbar.setIconSize(QSize(50, 50))
         self.addToolBar(toolbar)
 
-        # --- Add actions to toolbar ---
+        title = QLabel("Project Title")
+
+        title.setStyleSheet()
+
+        toolbar.addWidget(title)
+
+
+        # Home Buton - Toolbar
         action_home = QAction(QIcon("home.png"), "Home", self)
         action_home.triggered.connect(self.on_home)
         toolbar.addAction(action_home)
 
+        # Map Button - Toolbar
+        action_map = QAction(QIcon("map.png"), "Map", self)
+        action_map.triggered.connect(self.on_map)
+        toolbar.addAction(action_map)
+
+        # File Button - Toolbar
         action_camera = QAction(QIcon("camera.png"), "Camera", self)
         action_camera.triggered.connect(self.on_camera)
         toolbar.addAction(action_camera)
@@ -43,6 +62,9 @@ class MainWindow(QMainWindow):
 
     def on_camera(self):
         print("Camera clicked")
+    
+    def on_map(self):
+        print("Map clicked")
 
 
 def main():
