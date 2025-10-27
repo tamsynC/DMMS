@@ -61,18 +61,51 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         grid = QGridLayout()
 
-        hbox = QHBoxLayout()
-        hbox.addWidget(QPushButton("A"))
-        hbox.addWidget(QPushButton("B"))
-        hbox.addWidget(QPushButton("C"))
+        # Column 1-3 Row 1 - 5
+        videofeed = QLabel(" ")
 
-        grid.addLayout(hbox, 0,0)
+        videofeed.setStyleSheet("background-color: grey;")
 
-        vbox = QVBoxLayout()
-        vbox.addWidget(QPushButton("Top"))
-        vbox.addWidget(QPushButton("Bottom"))
+        grid.addWidget(videofeed, 0, 0, 5, 3)
 
-        grid.addLayout(vbox, 0, 1)
+        # vbox = QVBoxLayout()
+        # vbox.addWidget(QPushButton("Top"))
+        # vbox.addWidget(QPushButton("Bottom"))
+        # grid.addLayout(vbox, 0, 4)
+
+        #Column 4
+        # Row 1 - Auto Manual Slider
+
+        slider_hbox = QHBoxLayout()
+        manual = QLabel("Manual")
+        manual.setStyleSheet("font-size:16px;")
+        slider_hbox.addWidget(manual)
+
+        # 0 = manual 1 = auto
+        self.control_mode = QSlider(Qt.Horizontal)
+        self.control_mode.setMinimum(0)
+        self.control_mode.setMaximum(1)
+        self.control_mode.setValue(0)
+
+        # self.control_mode.valueChanged.connect(self.control_mode)
+
+
+        slider_hbox.addWidget(self.control_mode)
+
+
+        auto = QLabel("Auto")
+        auto.setStyleSheet("font-size:16px;")
+        slider_hbox.addWidget(auto)
+
+        grid.addLayout(slider_hbox, 0, 4)
+
+        # Row 2 - Speed Control and Forwards/ backwards
+
+        # Row 3 - Damage Log
+
+        # Row 4 - Take Photo and Start/Stop video
+
+        # Row 5 - Distance, GPS Pos and Orientation
 
         central_widget.setLayout(grid)
 
@@ -87,6 +120,12 @@ class MainWindow(QMainWindow):
     
     def on_map(self):
         print("Map clicked")
+
+    def control_mode(self, value):
+        if value == 1:
+            print("Automatic Control")
+        else:
+            print("Manual Control")
 
 
 def main():
