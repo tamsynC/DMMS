@@ -1,0 +1,8 @@
+Pi -> Arduino
+MOVEMENT: forwards | backwards | stopped
+SPEED: 1 | 2 | 3 | 4 | 5
+
+Arduino -> Pi
+GPS: xx , xx
+BEARING: xx
+DISTANCE: XX
