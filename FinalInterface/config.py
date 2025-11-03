@@ -1,0 +1,1 @@
+windowTitle = "Small Conduit Inspector"
