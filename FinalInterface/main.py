@@ -10,7 +10,7 @@ from functools import partial
 import serial, serial.tools.list_ports
 import datetime
 
-from config import windowTitle
+from config import windowTitle, BASE_DIR
 
 BAUD = 9600
 PORT = "COM5" #WINDOWS
@@ -53,6 +53,7 @@ class MainWindow(QMainWindow):
         self.main_menu()
 
         self.serial_max_distance()
+        self.create_project_file()
 
         self.mapWindow = None
 
@@ -273,6 +274,7 @@ class MainWindow(QMainWindow):
         imuGrid = QGridLayout()
 
         distanceLabel = QLabel("Distance: (mm)")
+        # distanceLabel.setSt
         imuGrid.addWidget(distanceLabel, 0, 0)
 
         self.distanceValue = QLabel(f"{self.distance}", self)
@@ -446,4 +448,27 @@ class MainWindow(QMainWindow):
                 self.distanceValue.setText(f"{self.distance}")
                 self.update_progress_bar(self.distance)
             
-        
+    def create_project_file(self):
+        try:
+            projectsDir = os.path.join(BASE_DIR, "Projects")
+            os.makedirs(projectsDir, exist_ok=True)
+    
+            self.projectPath = os.path.join(projectsDir, self.pName)
+            os.makedirs(self.projectPath, exist_ok=True)
+    
+            self.filePath = os.path.join(self.projectPath, f"{self.pName}.txt")
+    
+            now = datetime.datetime.now()
+            date = now.strftime("%d-%m-%Y")
+            time = now.strftime("%H:%M")
+    
+            with open(self.filePath, "a", encoding="utf-8") as f:
+                f.write(
+                    f"Project Name: {self.pName}\n"
+                    f"Date: {date}\n"
+                    f"Start Time: {time}\n"
+                    f"Location: {self.GPSLat}, {self.GPSLong}\n\n"
+                )
+        except Exception as e:
+            print("Error:", e)
+    
