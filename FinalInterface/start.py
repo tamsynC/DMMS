@@ -4,7 +4,7 @@ from PyQt5.QtCore import *
 
 import sys, os
 
-from config import windowTitle
+from config import windowTitle, BASE_DIR, PROJECTS_DIR
 
 class StartWindow(QWidget):
 
@@ -128,27 +128,24 @@ class StartWindow(QWidget):
             QMessageBox.warning(self, "Error", "Please enter an endoscope length")
             return
         
+        projectDir = PROJECTS_DIR
+        os.makedirs(projectDir, exist_ok=True)
+
+        import re
+        baseName = re.sub(r'[^\w\-. ]', "_", self.projectName)
+
+        candidate = baseName
         counter = 1
 
-        while os.path.exists(self.projectName):
-            self.projectName = f"{self.projectName}-{counter}"
+        while os.path.exists(os.path.join(projectDir, candidate)):
+            candidate = f"{baseName}-{counter}"
             counter += 1
+
+        self.projectName = candidate
 
         self.projectDataEntered.emit(self.projectName, self.endoscopeLength)
 
         # print(f"Project Name: {self.projectName}\nEndoscope Length: {self.endoscopeLength}")
 
     def open_files(self):
-        print("Files Clicked")
-         
-         
-# def main():
-#     app = QApplication(sys.argv)
-#     window = StartWindow()
-
-#     window.showMaximized()
-#     sys.exit(app.exec_()) #exec_ is to execute
-
-
-# if __name__ == "__main__":
-#     main()
+        print("Files Clicked") 
