@@ -90,8 +90,8 @@ class MainWindow(QMainWindow):
         toolbar.addAction(action_map)
 
         # File Button - Toolbar
-        action_camera = QAction(QIcon("icons/camera.png"), "Camera", self)
-        action_camera.triggered.connect(self.on_camera)
+        action_camera = QAction(QIcon("icons/folder.png"), "Folder", self)
+        action_camera.triggered.connect(self.on_folder)
         toolbar.addAction(action_camera)
 
         action_settings = QAction(QIcon("icons/settings.png"), "Settings", self)
@@ -309,8 +309,8 @@ class MainWindow(QMainWindow):
     def on_home(self):
         print("Home clicked")
 
-    def on_camera(self):
-        print("Camera clicked")
+    def on_folder(self):
+        print("Folder clicked")
 
     def on_settings(self):
         print("Settings Clicked")

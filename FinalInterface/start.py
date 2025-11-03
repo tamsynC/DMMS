@@ -91,13 +91,26 @@ class StartWindow(QWidget):
 
         startLayoutVBox.addWidget(gridContainer, alignment=Qt.AlignCenter)
 
+        buttonsHBox = QHBoxLayout()
+        buttonsHBox.setSpacing(20)
+        buttonsHBox.setAlignment(Qt.AlignCenter)
+
         self.startButton = QPushButton("Start", self)
         self.startButton.setStyleSheet("color:white;"
                                        "background-color:#0F4BEB;"
                                        "font-weight:bold;"
                                        "font-size:18px")
         self.startButton.clicked.connect(self.open_main_menu)
-        startLayoutVBox.addWidget(self.startButton, alignment=Qt.AlignCenter)
+        buttonsHBox.addWidget(self.startButton)
+
+        self.fileButton = QPushButton()
+        self.fileButton.setIcon(QIcon("icons/folder.png"))
+        self.fileButton.setIconSize(QSize(25, 25))
+        self.fileButton.setFixedSize(self.startButton.sizeHint())
+        self.fileButton.clicked.connect(self.open_files)
+        buttonsHBox.addWidget(self.fileButton)
+        
+        startLayoutVBox.addLayout(buttonsHBox)
 
         self.setLayout(startLayoutVBox)
 
@@ -124,6 +137,9 @@ class StartWindow(QWidget):
         self.projectDataEntered.emit(self.projectName, self.endoscopeLength)
 
         # print(f"Project Name: {self.projectName}\nEndoscope Length: {self.endoscopeLength}")
+
+    def open_files(self):
+        print("Files Clicked")
          
          
 # def main():
