@@ -31,15 +31,25 @@ class Controler():
         self.mainWindow = MainWindow(pName, eLength)
         self.mainWindow.openMapRequest.connect(self.open_map_window)
         self.mainWindow.openFilesRequested.connect(self.open_file_window)
+        self.mainWindow.goHomeRequested.connect(self.go_home)
         self.mainWindow.showMaximized()
 
-    def open_map_window(self, lat: float, lng: float):
-
-        if self.mapWindow is not None:
-            self.mapWindow.close()
+    def go_home(self):
+        if MainWindow is not None:
+            self.mainWindow.close()
+            self.mainWindow = None
         
-        self.mapWindow = MapWindow(lat, lng)
+        self.show_start_window()
+
+    def open_map_window(self, lat: float, lng: float, pName: str):
+        if self.mapWindow is None:
+            self.mapWindow = MapWindow(lat, lng, pName)
+            self.mapWindow.backButton.clicked.connect(self.close_map_window)
+            
+        
         self.mapWindow.showMaximized()
+        self.mapWindow.raise_()
+        self.mapWindow.activateWindow()
 
     def open_file_window(self):
         if self.fileWindow is None:
@@ -54,6 +64,11 @@ class Controler():
         if self.fileWindow is not None:
             self.fileWindow.close()
             self.fileWindow = None
+
+    def close_map_window(self):
+        if self.mapWindow is not None:
+            self.mapWindow.close()
+            self.mapWindow = None
 
     def run(self):
         self.show_start_window()

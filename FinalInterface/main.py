@@ -24,8 +24,9 @@ except serial.SerialException as e:
 
 class MainWindow(QMainWindow):
 
-    openMapRequest = pyqtSignal(float, float)
-    openFilesRequested = pyqtSignal() 
+    openMapRequest = pyqtSignal(float, float, str)
+    openFilesRequested = pyqtSignal()
+    goHomeRequested = pyqtSignal()
 
     def __init__(self, projectName: str, endoscopeLength: str):
         super().__init__()
@@ -81,24 +82,20 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(spacer2)
 
         # Home Buton - Toolbar
-        action_home = QAction(QIcon("icons/home.png"), "Home", self)
-        action_home.triggered.connect(self.on_home)
-        toolbar.addAction(action_home)
+        actionHome = QAction(QIcon("icons/home.png"), "Home", self)
+        actionHome.triggered.connect(self.on_home)
+        toolbar.addAction(actionHome)
         
 
         # Map Button - Toolbar
         action_map = QAction(QIcon("icons/map.png"), "Map", self)
-        action_map.triggered.connect(lambda: self.openMapRequest.emit(float(self.GPSLat), float(self.GPSLong)))
+        action_map.triggered.connect(lambda: self.openMapRequest.emit(float(self.GPSLat), float(self.GPSLong), str(self.pName)))
         toolbar.addAction(action_map)
 
         # File Button - Toolbar
         action_camera = QAction(QIcon("icons/folder.png"), "Folder", self)
         action_camera.triggered.connect(self.on_folder)
         toolbar.addAction(action_camera)
-
-        action_settings = QAction(QIcon("icons/settings.png"), "Settings", self)
-        action_settings.triggered.connect(self.on_settings)
-        toolbar.addAction(action_settings)
 
         self.mapWindow = None
 
@@ -311,13 +308,11 @@ class MainWindow(QMainWindow):
 
     def on_home(self):
         print("Home clicked")
+        self.goHomeRequested.emit()
 
     def on_folder(self):
         # print("Folder clicked")
         self.openFilesRequested.emit()
-
-    def on_settings(self):
-        print("Settings Clicked")
 
     def updateMode(self, value):
         self.mode = value
