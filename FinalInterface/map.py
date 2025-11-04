@@ -6,6 +6,8 @@ from PyQt5.QtPrintSupport import *
 
 import os, sys
 
+from config import windowTitle
+
 # GPSLat = -33
 # GPSLong = 151
 
@@ -19,8 +21,7 @@ class MapWindow(QWidget):
         self.GPSLat = GPSLat
         self.GPSLong = GPSLong
 
-        self.setWindowTitle("Map")
-        self.resize(900,600)
+        self.setWindowTitle(f"{windowTitle} Map")
 
         self.map_view(GPSLat, GPSLong)
 

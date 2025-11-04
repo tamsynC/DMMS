@@ -25,6 +25,7 @@ except serial.SerialException as e:
 class MainWindow(QMainWindow):
 
     openMapRequest = pyqtSignal(float, float)
+    openFilesRequested = pyqtSignal() 
 
     def __init__(self, projectName: str, endoscopeLength: str):
         super().__init__()
@@ -312,7 +313,8 @@ class MainWindow(QMainWindow):
         print("Home clicked")
 
     def on_folder(self):
-        print("Folder clicked")
+        # print("Folder clicked")
+        self.openFilesRequested.emit()
 
     def on_settings(self):
         print("Settings Clicked")
@@ -467,7 +469,7 @@ class MainWindow(QMainWindow):
                     f"Project Name: {self.pName}\n"
                     f"Date: {date}\n"
                     f"Start Time: {time}\n"
-                    f"Location: {self.GPSLat}, {self.GPSLong}\n\n"
+                    # f"Location: {self.GPSLat}, {self.GPSLong}\n\n"
                 )
         except Exception as e:
             print("Error:", e)

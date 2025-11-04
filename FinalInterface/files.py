@@ -15,21 +15,26 @@ class FileWindow(QWidget):
 
         self.projectDir = PROJECTS_DIR
         self.currentPath = None
+        self.projectName = None
 
         self.file_menu()
 
     def file_menu(self):
 
         fileVBox = QVBoxLayout()
-        fileVBox.setAlignment(Qt.AlignTop)
+        fileVBox.setAlignment(Qt.AlignTop | Qt.AlignCenter)
+
+        self.backButton = QPushButton("← Back")
+        self.backButton.setStyleSheet("font-size:16px;"
+                                      "font-weight:bold;")
+        fileVBox.addWidget(self.backButton, alignment=Qt.AlignRight)
 
         fileTitle = QLabel("Project Files")
-        fileTitle.setStyleSheet("font-size:30px;"
+        fileTitle.setStyleSheet("font-size:32px;"
                                 "font-weight:bold;"
                                 "background-color:#0F4BEB;"
                                 "color:white;")
-        fileTitle.setMaximumHeight(60)
-        fileTitle.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+        fileTitle.setAlignment(Qt.AlignHCenter)
         fileVBox.addWidget(fileTitle)
 
         # H Box for file exploeres and image
@@ -41,6 +46,12 @@ class FileWindow(QWidget):
 
         folderSelectionVBox = QVBoxLayout()
         folderSelectionVBox.setAlignment(Qt.AlignTop)
+
+        folderListLabel = QLabel("Folder Lists", self)
+        folderListLabel.setStyleSheet("font-size:16px;"
+                                      "font-weight:bold;")
+        
+        folderSelectionVBox.addWidget(folderListLabel)
 
         self.folderList = QComboBox()
 
@@ -56,15 +67,36 @@ class FileWindow(QWidget):
                                       font-size:16px;}
                                       """)
         
+        self.folderList.currentTextChanged.connect(self.load_files)
+        
         folderSelectionVBox.addWidget(self.folderList)
 
+        self.fileListLabel = QLabel(f"Files in {self.currentPath}")
+        self.fileListLabel.setStyleSheet("font-size:16px;"
+                                      "font-weight:bold;")
+        folderSelectionVBox.addWidget(self.fileListLabel)
+
         self.fileList = QListWidget()
+        self.fileList.setStyleSheet("""
+                                    QListWidget{
+                                    font-size:16px;
+                                    }""")
         
+        self.fileList.itemClicked.connect(self.show_preview)
+        
+        folderSelectionVBox.addWidget(self.fileList)        
 
         folderSelectionWidget = QWidget()
         folderSelectionWidget.setLayout(folderSelectionVBox)
+        folderSelectionWidget.setMaximumWidth(150)
 
         folderViewHBox.addWidget(folderSelectionWidget)
+
+        self.previewLabel = QLabel()
+        self.previewLabel.setAlignment(Qt.AlignCenter)
+        self.previewLabel.setStyleSheet("background-color:grey;")
+        folderViewHBox.addWidget(self.previewLabel)
+
 
         folderViewWidget = QWidget()
         folderViewWidget.setLayout(folderViewHBox)       
@@ -73,9 +105,60 @@ class FileWindow(QWidget):
 
         self.setLayout(fileVBox)
 
-    def load_files(self, item):
-        self.currentFolder = os.path.join(self.projectDir, item.text())
+        if self.folderList.count() > 0:
+            self.load_files(self.folderList.currentText())
+
+    def load_files(self, folderName):
+
+        if not folderName:
+            self.fileList.clear()
+            self.currentPath = None
+            self.projectName = None
+            return
+
+        self.currentPath = os.path.join(self.projectDir, folderName)
+        self.projectName = os.path.basename(self.currentPath)
+
         self.fileList.clear()
+
+        self.fileListLabel.setText(f"Files in {self.projectName}")
+
+        if os.path.exists(self.currentPath):
+            for f in sorted(os.listdir(self.currentPath)):
+                full = os.path.join(self.currentPath, f)
+                if os.path.isfile(full):  # only files; remove if you also want subfolders
+                    self.fileList.addItem(f)
+
+    def show_preview(self, fileName):
+
+        if self.currentPath is None:
+            return
+        
+        filePath = os.path.join(self.currentPath, fileName.text())
+
+        if os.path.isfile(filePath):
+
+            if fileName.text().lower().endswith(".txt"):
+                with open(filePath, "r") as f:
+                    text = f.read()
+                
+                self.previewLabel.setPixmap(QPixmap())
+                self.previewLabel.setText(text)
+
+            elif fileName.text().lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif")):
+                pixmap = QPixmap(filePath)
+                self.previewLabel.setPixmap(pixmap.scaled(
+                    self.previewLabel.height(),
+                    self.previewLabel.width(),
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                ))
+                self.previewLabel.setText("")
+            
+            else:
+                self.previewLabel.setPixmap(QPixmap())
+                self.previewLabel.setText(f"Cannot preview {fileName.text()}")
+
         
          
 
