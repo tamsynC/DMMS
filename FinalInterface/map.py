@@ -6,52 +6,65 @@ from PyQt5.QtPrintSupport import *
 
 import os, sys
 
+from config import windowTitle
+
 # GPSLat = -33
 # GPSLong = 151
 
 class MapWindow(QWidget):
 
-    
-
-    def __init__(self, GPSLat, GPSLong):
+    def __init__(self, GPSLat, GPSLong, projectName: str):
         super().__init__()
 
         self.GPSLat = GPSLat
         self.GPSLong = GPSLong
 
-        self.setWindowTitle("Map")
-        self.resize(900,600)
+        self.projectName = projectName
 
-        self.map_view(GPSLat, GPSLong)
+        self.setWindowTitle(f"{windowTitle} Map")
 
-    def map_view(self, GPSLat, GPSLong):
+        self.map_view(GPSLat, GPSLong, projectName)
 
-        mapLayout = QVBoxLayout(self)
+    def map_view(self, GPSLat, GPSLong, pName):
+
+        mapLayoutVBox = QVBoxLayout(self)
+        mapLayoutVBox.setAlignment(Qt.AlignTop)
+
+
+        self.backButton = QPushButton("← Back")
+        self.backButton.setStyleSheet("font-size:16px;"
+                                      "font-weight:bold;")
+        mapLayoutVBox.addWidget(self.backButton, alignment=Qt.AlignRight)
+
+        # Title
+        mapTitle = QLabel(f"{pName} Map")
+        mapTitle.setStyleSheet("font-size:32px;"
+                                "font-weight:bold;"
+                                "background-color:#0F4BEB;"
+                                "color:white;")
+        mapTitle.setAlignment(Qt.AlignCenter)
+
+        mapLayoutVBox.addWidget(mapTitle)
 
         self.mapBrowser = QWebEngineView(self)
+        self.mapBrowser.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        mapLayout.addWidget(self.mapBrowser)
-
-        # self.mapBrowser.setUrl(QUrl(f"https://www.google.com/maps/place/{GPSLat},{GPSLong}"))
+        mapLayoutVBox.addWidget(self.mapBrowser, 1)
 
         googleMaps = QUrl.fromUserInput(f"https://www.google.com/maps?q={GPSLat},{GPSLong}&z=16")
 
         self.mapBrowser.load(googleMaps)
-
         self.mapBrowser.loadFinished.connect(self.on_load_finished)
 
     def on_load_finished(self, ok: bool):
         if not ok:
             print("Google maps bad")
 
+# def main():
+#     app = QApplication(sys.argv)
+#     win = MapWindow(-33, 151, "test")
+#     win.showMaximized()
+#     sys.exit(app.exec_())
 
-def main():
-    app = QApplication(sys.argv)
-    win = MapWindow(-33, 151)
-    win.showMaximized()
-    sys.exit(app.exec_())
-
-if __name__ == "__main__":
-    main()  
-
-
+# if __name__ == "__main__":
+#     main()  

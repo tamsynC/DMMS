@@ -9,6 +9,7 @@ from config import windowTitle, BASE_DIR, PROJECTS_DIR
 class StartWindow(QWidget):
 
     projectDataEntered = pyqtSignal(str, str)
+    openFilesRequested = pyqtSignal() 
 
     def __init__(self):
         super().__init__()
@@ -148,4 +149,6 @@ class StartWindow(QWidget):
         # print(f"Project Name: {self.projectName}\nEndoscope Length: {self.endoscopeLength}")
 
     def open_files(self):
-        print("Files Clicked") 
+        # print("Files Clicked")
+        self.openFilesRequested.emit()
+
