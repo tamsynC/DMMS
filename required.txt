@@ -6,3 +6,4 @@ tkinter
 pip install PyQt5
 
 pip install PyQtWebEngine
+sudo apt install python3-pyqt5.qtwebengine
