@@ -4,7 +4,7 @@ import serial.tools.list_ports
 
 # Set Up
 BAUD = 9600 # MUST BE SAME AS ARDUINO
-PORT = "COM5" # WILL CHANGE BASED ON ARDUINO
+PORT = "COM3" # WILL CHANGE BASED ON ARDUINO
 ser = serial.Serial(PORT, BAUD, timeout=1)
 
 string_f = "F0\n"
