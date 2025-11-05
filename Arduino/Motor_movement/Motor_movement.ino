@@ -1,10 +1,11 @@
 // CNC-style serial stepper control with A4988
-// Commands: F1 (forward on), F0 (forward stop), R1 (reverse on), R0 (reverse stop)
+// Commands from serial: F1 (forward on), F0 (forward off), R1 (reverse on), R0 (reverse off)
 
- int xStep = 2;
- int xDir  = 5;
- int yStep = 3;
- int yDir  = 6;
+int xStep = 5;
+int xDir  = 2;
+int yStep = 6;
+int yDir  = 3;
+int enablePin = 8;  // CNC shield enable pin (LOW = enabled)
 
 bool forwardOn = false;
 bool reverseOn = false;
@@ -14,15 +15,18 @@ void setup() {
   pinMode(xDir, OUTPUT);
   pinMode(yStep, OUTPUT);
   pinMode(yDir, OUTPUT);
+  pinMode(enablePin, OUTPUT);
 
-  Serial.begin(9600);  // must match Python BAUD rate
+  digitalWrite(enablePin, LOW); // enable drivers
+  Serial.begin(9600);
+  Serial.println("Stepper control ready. Send F1/F0/R1/R0");
 }
 
 void loop() {
-  // Check for serial command
+  // --- Check for serial command ---
   if (Serial.available() > 0) {
     String cmd = Serial.readStringUntil('\n');
-    cmd.trim();
+    cmd.trim();  // removes newline and spaces
 
     if (cmd == "F1") {
       forwardOn = true;
@@ -46,15 +50,18 @@ void loop() {
       reverseOn = false;
       Serial.println("Reverse OFF");
     }
+    else {
+      Serial.println("Unknown command");
+    }
   }
 
-  // Move steppers if active
+  // --- Move steppers if active ---
   if (forwardOn || reverseOn) {
     digitalWrite(xStep, HIGH);
     digitalWrite(yStep, HIGH);
-    delayMicroseconds(500);  // Adjust speed
+    delayMicroseconds(700);  // speed control
     digitalWrite(xStep, LOW);
     digitalWrite(yStep, LOW);
-    delayMicroseconds(500);
+    delayMicroseconds(700);
   }
 }
