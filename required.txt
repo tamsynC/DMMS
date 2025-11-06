@@ -1,8 +1,0 @@
-required.txt
-
-pyserial
-tkinter
-
-pip install PyQt5
-
-sudo usermod -a -G dialout $USER
