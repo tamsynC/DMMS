@@ -13,7 +13,10 @@ import datetime
 from config import windowTitle, BASE_DIR
 
 BAUD = 9600
-PORT = "COM5" #WINDOWS
+# PORT = "COM5" #WINDOWS
+PORT = "/dev/ttyUSB0"
+DEVICE = "/dev/video4" #correct T Linux 
+
 
 try:
     ser = serial.Serial(PORT, BAUD, timeout=1)
@@ -50,6 +53,25 @@ class MainWindow(QMainWindow):
         self.serialTimer = QTimer()
         self.serialTimer.timeout.connect(self.read_serial)
         self.serialTimer.start(10)
+
+                # --- OpenCV camera setup ---
+        self.cap = cv2.VideoCapture(DEVICE, cv2.CAP_V4L2)
+        if not self.cap.isOpened():
+            print(f"Could not open camera at {DEVICE}")
+            self.cap = None
+        else:
+            # Try to negotiate a sane mode (V4L2 will pick nearest valid)
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            self.cap.set(cv2.CAP_PROP_FPS, 30)
+
+        self.last_frame_bgr = None
+
+        # Timer for camera frames (~30 fps)
+        self.camTimer = QTimer(self)
+        self.camTimer.timeout.connect(self.update_frame)
+        self.camTimer.start(30)
+
 
         self.tool_bar()
         self.main_menu()
@@ -105,11 +127,13 @@ class MainWindow(QMainWindow):
         mainGrid = QGridLayout()
 
         # Column 1-3 Row 1 - 4
-        videofeed = QLabel(" ")
+        self.videofeed = QLabel("Starting camera…")
+        self.videofeed.setAlignment(Qt.AlignCenter)
+        self.videofeed.setStyleSheet("background:#111; color:#bbb;")
+        mainGrid.addWidget(self.videofeed, 0, 0, 1, 1)
 
-        videofeed.setStyleSheet("background-color: grey;")
 
-        mainGrid.addWidget(videofeed, 0, 0, 1, 1)
+        mainGrid.addWidget(self.videofeed, 0, 0, 1, 1)
 
         # Row 1 Column 0 Progress Bar
 
@@ -241,15 +265,31 @@ class MainWindow(QMainWindow):
 
         logCrack = QPushButton("Crack")
         logCrack.setStyleSheet("font-size:24px; background-color:#F0F0F0;")
+        logCrack.clicked.connect(lambda: self.capture_damage("Crack"))
         damageGrid.addWidget(logCrack, 1, 0)
 
         logPartial = QPushButton("Part. Block")
         logPartial.setStyleSheet("font-size:24px; background-color:#F0F0F0;")
+        logPartial.clicked.connect(lambda: self.capture_damage("Partial Block"))
         damageGrid.addWidget(logPartial, 1, 1)
 
         logFull = QPushButton("Full Block")
         logFull.setStyleSheet("font-size:24px; background-color:#F0F0F0;")
+        logFull.clicked.connect(lambda: self.capture_damage("Full Block"))
         damageGrid.addWidget(logFull, 1, 2)
+
+
+        # logCrack = QPushButton("Crack")
+        # logCrack.setStyleSheet("font-size:24px; background-color:#F0F0F0;")
+        # damageGrid.addWidget(logCrack, 1, 0)
+
+        # logPartial = QPushButton("Part. Block")
+        # logPartial.setStyleSheet("font-size:24px; background-color:#F0F0F0;")
+        # damageGrid.addWidget(logPartial, 1, 1)
+
+        # logFull = QPushButton("Full Block")
+        # logFull.setStyleSheet("font-size:24px; background-color:#F0F0F0;")
+        # damageGrid.addWidget(logFull, 1, 2)
 
         controlPanelVBox.addLayout(damageGrid)
 
@@ -354,7 +394,7 @@ class MainWindow(QMainWindow):
 
         try:
             ser.write(payload)
-            print(f"Sent: {payload.decode("ascii")}")
+            print(f"Sent: {payload.decode('ascii')}")
         except Exception as e:
             print("Serial write failed:", e)
 
@@ -468,4 +508,89 @@ class MainWindow(QMainWindow):
                 )
         except Exception as e:
             print("Error:", e)
-    
+
+    def update_frame(self):
+        """Grab frames from OpenCV and paint into the QLabel."""
+        if not self.cap or not self.cap.isOpened():
+            # Show a friendly message once; don’t spam.
+            if self.videofeed.text() != "Camera not open":
+                self.videofeed.setText("Camera not open")
+            return
+
+        ok, frame = self.cap.read()
+        if not ok or frame is None:
+            if self.videofeed.text() != "No frame":
+                self.videofeed.setText("No frame")
+            return
+
+        # Save last frame for snapshots
+        self.last_frame_bgr = frame
+
+        # Convert BGR -> RGB and show
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb.shape
+        qimg = QImage(rgb.data, w, h, ch * w, QImage.Format_RGB888)
+
+        # Scale to current label size, keep aspect ratio
+        pix = QPixmap.fromImage(qimg).scaled(
+            self.videofeed.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
+        self.videofeed.setPixmap(pix)
+
+    def capture_damage(self, damage_type: str):
+        """
+        Save a photo + append a log entry with:
+        - timestamp
+        - damage type
+        - distance (mm)
+        - GPS (Lat, Long)
+        Files saved into the project folder created by create_project_file().
+        """
+        tstamp = datetime.datetime.now().strftime("%H-%M-%S")
+        # Make a safe filename segment for GPS (remove commas/spaces)
+        lat = str(self.GPSLat).replace(",", "_").replace(" ", "")
+        lon = str(self.GPSLong).replace(",", "_").replace(" ", "")
+
+        # Build image filename
+        image_name = os.path.join(
+            self.projectPath,
+            f"Time-{tstamp}_Distance-{self.distance}_GPS-{lat}_{lon}_Damage-{damage_type}.jpg"
+        )
+
+        # Write log line
+        log_line = (
+            f"Time: {tstamp}   Damage: {damage_type}   "
+            f"Distance(mm): {self.distance}   "
+            f"GPS: {self.GPSLat},{self.GPSLong}\n"
+        )
+        try:
+            with open(self.filePath, "a", encoding="utf-8") as f:
+                f.write(log_line)
+        except Exception as e:
+            print("Log write error:", e)
+
+        # Save the latest frame
+        if self.last_frame_bgr is None:
+            print("No frame available to save.")
+            return
+        try:
+            ok = cv2.imwrite(image_name, self.last_frame_bgr)
+            if ok:
+                print(f"Saved Image to {image_name}")
+            else:
+                print("cv2.imwrite() failed")
+        except Exception as e:
+            print("Image save error:", e)
+
+    def closeEvent(self, e):
+        try:
+            if hasattr(self, "camTimer") and self.camTimer.isActive():
+                self.camTimer.stop()
+            if hasattr(self, "serialTimer") and self.serialTimer.isActive():
+                self.serialTimer.stop()
+            if hasattr(self, "cap") and self.cap and self.cap.isOpened():
+                self.cap.release()
+        except Exception:
+            pass
+        super().closeEvent(e)
+
