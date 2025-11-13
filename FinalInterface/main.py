@@ -15,7 +15,7 @@ from config import windowTitle, BASE_DIR
 BAUD = 9600
 # PORT = "COM5" #WINDOWS
 PORT = "/dev/ttyUSB0"
-DEVICE = "/dev/video4" #correct T Linux 
+DEVICE = "/dev/video0" #correct T Linux 
 
 
 try:
@@ -71,6 +71,11 @@ class MainWindow(QMainWindow):
         self.camTimer = QTimer(self)
         self.camTimer.timeout.connect(self.update_frame)
         self.camTimer.start(30)
+
+        self.is_recording = False
+        self.video_writer = None
+        self.video_path = None
+
 
 
         self.tool_bar()
@@ -295,17 +300,22 @@ class MainWindow(QMainWindow):
 
         # Row 4 - Take Photo and Start/Stop video
 
+        # Row 4 - Take Photo and Start/Stop video
         recordHBox = QHBoxLayout()
 
-        recordPhoto = QPushButton("Photo")
-        recordPhoto.setStyleSheet("font-size:24px; background-color:#F0F0F0;")
-        recordHBox.addWidget(recordPhoto)
+        self.photoButton = QPushButton("Photo")
+        self.photoButton.setStyleSheet("font-size:24px; background-color:#F0F0F0;")
+        self.photoButton.clicked.connect(self.capture_photo)   # <-- connect
+        recordHBox.addWidget(self.photoButton)
 
-        recordVideo = QPushButton("Video")
-        recordVideo.setStyleSheet("font-size:24px; background-color:#F0F0F0;")
-        recordHBox.addWidget(recordVideo)
+        self.videoButton = QPushButton("Video")
+        self.videoButton.setStyleSheet("font-size:24px; background-color:#F0F0F0;")
+        self.videoButton.setCheckable(True)                    # toggle-style button
+        self.videoButton.clicked.connect(self.toggle_video)    # <-- connect
+        recordHBox.addWidget(self.videoButton)
 
         controlPanelVBox.addLayout(recordHBox)
+
 
         # Row 5 - Distance, GPS Pos
 
@@ -526,6 +536,9 @@ class MainWindow(QMainWindow):
         # Save last frame for snapshots
         self.last_frame_bgr = frame
 
+        if self.is_recording and self.video_writer is not None:
+            self.video_writer.write(self.last_frame_bgr)
+
         # Convert BGR -> RGB and show
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         h, w, ch = rgb.shape
@@ -582,6 +595,88 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print("Image save error:", e)
 
+    def capture_photo(self):
+        if self.last_frame_bgr is None:
+            print("No frame available to save.")
+            return
+        try:
+            tstamp = datetime.datetime.now().strftime("%H-%M-%S")
+            image_name = os.path.join(self.projectPath, f"Photo-{tstamp}_Dist-{self.distance}.jpg")
+            ok = cv2.imwrite(image_name, self.last_frame_bgr)
+            if ok:
+                print(f"Saved photo: {image_name}")
+                # Optional: append to log
+                with open(self.filePath, "a", encoding="utf-8") as f:
+                    f.write(f"Photo: {tstamp}  Distance(mm): {self.distance}  GPS: {self.GPSLat},{self.GPSLong}\n")
+            else:
+                print("cv2.imwrite() failed for photo")
+        except Exception as e:
+            print("Photo save error:", e)
+
+    def toggle_video(self, checked: bool):
+        if checked and not self.is_recording:
+            # ---- Start recording ----
+            if not self.cap or not self.cap.isOpened():
+                print("Camera not open; cannot start recording.")
+                self.videoButton.setChecked(False)
+                return
+
+            # Determine FPS and frame size
+            fps = self.cap.get(cv2.CAP_PROP_FPS)
+            if not fps or fps <= 1:
+                fps = 30.0  # fallback
+
+            width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)  or 640)
+            height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 480)
+
+            # Choose container + codec; .mp4 with mp4v is widely OK on Linux
+            tstamp = datetime.datetime.now().strftime("%H-%M-%S")
+            self.video_path = os.path.join(self.projectPath, f"Video-{tstamp}.avi")
+            fourcc = cv2.VideoWriter_fourcc(*'X','V','I','D')
+
+            try:
+                self.video_writer = cv2.VideoWriter(self.video_path, fourcc, fps, (width, height))
+                if not self.video_writer.isOpened():
+                    print("Failed to open VideoWriter")
+                    self.video_writer = None
+                    self.videoButton.setChecked(False)
+                    return
+                self.is_recording = True
+                self.videoButton.setText("Stop Video")
+                print(f"Recording started: {self.video_path} @ {fps} fps, {width}x{height}")
+
+                # Optional: write to session log
+                with open(self.filePath, "a", encoding="utf-8") as f:
+                    f.write(f"Video START: {tstamp}  FPS:{fps:.1f}  Size:{width}x{height}  Dist(mm):{self.distance}\n")
+
+            except Exception as e:
+                print("Error starting video:", e)
+                self.video_writer = None
+                self.videoButton.setChecked(False)
+
+        else:
+            # ---- Stop recording ----
+            if self.is_recording and self.video_writer is not None:
+                try:
+                    self.video_writer.release()
+                except Exception:
+                    pass
+            self.video_writer = None
+            self.is_recording = False
+            self.videoButton.setText("Video")
+            self.videoButton.setChecked(False)
+            print(f"Recording stopped: {self.video_path or ''}")
+
+            # Optional: log end
+            tstamp = datetime.datetime.now().strftime("%H-%M-%S")
+            try:
+                with open(self.filePath, "a", encoding="utf-8") as f:
+                    f.write(f"Video STOP: {tstamp}  Dist(mm):{self.distance}\n")
+            except Exception:
+                pass
+
+
+
     def closeEvent(self, e):
         try:
             if hasattr(self, "camTimer") and self.camTimer.isActive():
@@ -590,6 +685,11 @@ class MainWindow(QMainWindow):
                 self.serialTimer.stop()
             if hasattr(self, "cap") and self.cap and self.cap.isOpened():
                 self.cap.release()
+            if getattr(self, "video_writer", None) is not None:
+                try:
+                    self.video_writer.release()
+                except Exception:
+                    pass
         except Exception:
             pass
         super().closeEvent(e)
